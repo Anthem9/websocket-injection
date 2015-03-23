@@ -8,12 +8,18 @@ WebSocket 中转注入 Proxy(for SQL Injection tools: sqlmap, etc.)
     cd websocket-injection
     pip install -r requirements.txt
 
-### Usage
+### Usage for SQLMap
 
-    python main.py --port=8888
-    python sqlmap.py -u "http://localhost:8888/sqlmap?url=[target]&data=[sqli]" -p data
+    python main.py --port=9999
+    python sqlmap.py -u "http://localhost:9999/sqlmap?url=[target]&data=[sqli]" -p data
 
-![](https://github.com/RicterZ/websocket-injection/raw/master/usage.png)
+![](https://github.com/RicterZ/websocket-injection/raw/master/docs/usage.png)  
+
+### Usage for Webpage
+
+    python main.py --port=9999
+
+![](https://github.com/RicterZ/websocket-injection/raw/master/docs/usage2.png)  
 
 ### License
 MIT
