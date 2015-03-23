@@ -1,3 +1,4 @@
+import logging
 import tornado.web
 import tornado.ioloop
 import tornado.httpserver
@@ -10,6 +11,6 @@ if __name__ == '__main__':
     tornado.options.parse_command_line()
     http_server = tornado.httpserver.HTTPServer(Application())
     http_server.listen(options.port)
-
-    print 'WebSocket Injection Proxy Listening on %d' % options.port
+    logging.basicConfig(format='%(asctime) %(message)s')
+    logging.warning('WebSocket Injection Proxy Listening on 0.0.0.0:%d' % options.port)
     tornado.ioloop.IOLoop.instance().start()
