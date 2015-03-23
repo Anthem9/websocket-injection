@@ -17,7 +17,7 @@ class MainHandler(tornado.web.RequestHandler):
             raise Exception('Invaild WebSocket Url, example: ws://127.0.0.1/chat')
 
         print 'Request Payload: %s' % data
-        ws = websocket.WebSocket()
+        ws = websocket.WebSocket(sslopt={'cert_reqs': 0})
         ws.connect(url)
         ws.send(data)
         self.write(ws.recv())
