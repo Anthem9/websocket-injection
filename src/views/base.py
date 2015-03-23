@@ -12,15 +12,14 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def response(self, data):
         format = self.get_argument('format', default=None)
-        if isinstance(data, (dict, list, tuple)):
-            format = json
-
         if format == 'json':
             data = json.dumps({'data': data})
 
         logging.info('Response: %s' % data)
         self.write(data)
+        self.finish()
 
     def render(self, template, **kwargs):
         loader = Loader('templates')
         self.write(loader.load(template).generate(**kwargs))
+        self.finish()

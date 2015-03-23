@@ -1,9 +1,11 @@
+import logging
 import MySQLdb
 import json
 import tornado.web
 import tornado.ioloop
 import tornado.httpserver
 import tornado.websocket
+import tornado.options
 
 
 class Storage(dict):
@@ -26,7 +28,7 @@ class BaseSocketHandler(tornado.websocket.WebSocketHandler):
 
     @staticmethod
     def send_message(message):
-        print 'Send: %s' % message
+        logging.info('Send: %s' % message)
         for client in BaseSocketHandler.clients:
             client.write_message(json.dumps(message))
 
@@ -38,15 +40,15 @@ class WebSocketHandler(BaseSocketHandler):
 
     def open(self):
         self.session.id = str(id(self))
-        print 'Request: %s' % self.session.id
+        logging.warning('Request: %s' % self.session.id)
         self.clients.add(self)
 
     def on_close(self):
-        print 'Close: %s' % self.session.id
+        logging.warning('Close: %s' % self.session.id)
         self.clients.remove(self)
 
     def on_message(self, message):
-        print 'Recv: %s' % message
+        logging.info('Recv: %s' % message)
         try:
             self.db.execute("select table_name from information_schema.tables where table_schema='%s'" % message)
             data = self.db.fetchall()[0]
@@ -67,5 +69,5 @@ class Application(tornado.web.Application):
 if __name__ == '__main__':
     http_server = tornado.httpserver.HTTPServer(Application())
     http_server.listen(8888)
-
+    tornado.options.parse_command_line()
     tornado.ioloop.IOLoop.instance().start()

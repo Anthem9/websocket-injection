@@ -20,9 +20,10 @@ class SQLMapHandler(BaseHandler):
             data = self.websocket.recv()
         except Exception, e:
             logging.error('Error: %s' % str(e))
-            self.response({'error': str(e)})
-
-        self.response(data)
+            self.response('error: %s' %  str(e))
+        else:
+            self.response(data)
+        self.websocket.close()
 
 
 class MainHandler(BaseHandler):
