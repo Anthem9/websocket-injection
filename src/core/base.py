@@ -42,6 +42,10 @@ class WebSocketAppMixin(object):
         logging.info('Recv: %s' % message)
         self.response(message)
 
+    def on_close(self, websocket):
+        logging.critical('Connection closed')
+        self.client.ws = None
+
     def run_websocket(self, url):
         if not self.client.ws:
             self.client.ws = websocket.WebSocketApp(url=url, on_message=self.on_message)

@@ -3,6 +3,7 @@ import urlparse
 from requests.models import RequestEncodingMixin as encoder
 from tornado.escape import parse_qs_bytes
 from tornado.web import asynchronous
+from websocket import WebSocketException
 from core.base import BaseHandler
 from core.exceptions import UnexpectedReuqestDataException, InvalidWebSocketURLException
 
@@ -42,7 +43,13 @@ class SQLMapHandler(BaseHandler):
             self.run_websocket('%s?%s' % (url, query_str))
         else:
             self.client.has_send = False
-            self.client.ws.send(data if data else '')
+            try:
+                self.client.ws.send(data if data else '')
+            except WebSocketException, e:
+                self.client.ws.close()
+                self.client.ws = None
+                logging.error('Error occur: %s' % str(e))
+                self.finish()
 
     def get_argument(self, name, default=None, strip=True):
         return self._get_argument(name, default=default,
