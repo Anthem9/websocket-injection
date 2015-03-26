@@ -13,6 +13,10 @@ WebSocket 中转注入 Proxy(for SQL Injection tools: sqlmap, etc.)
     python main.py --port=9999
     python sqlmap.py -u "http://localhost:9999/sqlmap?url=[target]&data=[sqli]" -p data
 
+or 
+
+    python sqlmap.py -u "http://localhost:9999/sqlmap?url=[target]&is_params=1" --data="data=[sqli]" -p data
+
 ![](https://github.com/RicterZ/websocket-injection/raw/master/docs/usage.png)  
 
 ### Usage for Webpage
