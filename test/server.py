@@ -17,7 +17,6 @@ class Storage(dict):
 
 
 class BaseSocketHandler(tornado.websocket.WebSocketHandler):
-    clients = set()
 
     def __init__(self, application, request, **kwargs):
         self.session = Storage()
@@ -25,12 +24,6 @@ class BaseSocketHandler(tornado.websocket.WebSocketHandler):
         self.db = db.cursor()
 
         tornado.websocket.WebSocketHandler.__init__(self,application, request, **kwargs)
-
-    @staticmethod
-    def send_message(message):
-        logging.info('Send: %s' % message)
-        for client in BaseSocketHandler.clients:
-            client.write_message(json.dumps(message))
 
 
 class WebSocketHandler(BaseSocketHandler):
@@ -40,21 +33,35 @@ class WebSocketHandler(BaseSocketHandler):
 
     def open(self):
         self.session.id = str(id(self))
-        logging.warning('Request: %s' % self.session.id)
-        self.clients.add(self)
+        self.session.times = 0
+        data = self.get_argument('data', default=None)
+        logging.warning('Request(connect): %s' % self.session.id)
+
+        try:
+            self.db.execute("select table_name from information_schema.tables where table_schema='%s'" % data)
+            data = self.db.fetchall()[0]
+            self.send_message({'text': data[0]})
+        except Exception, e:
+            self.send_message({'text': str(e)})
+        self.send_message('aaa')
 
     def on_close(self):
         logging.warning('Close: %s' % self.session.id)
-        self.clients.remove(self)
+        self.close()
 
     def on_message(self, message):
-        logging.info('Recv: %s' % message)
+        logging.info('Recv(%d): %s' % (self.session.times, message))
+        #if self.session.times == 1:
         try:
             self.db.execute("select table_name from information_schema.tables where table_schema='%s'" % message)
             data = self.db.fetchall()[0]
             self.send_message({'text': data[0]})
         except Exception, e:
             self.send_message({'text': str(e)})
+
+    def send_message(self, message):
+        logging.info('Send: %s' % message)
+        self.write_message(message)
 
 
 class Application(tornado.web.Application):

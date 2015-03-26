@@ -3,7 +3,7 @@ import tornado.web
 import tornado.ioloop
 import tornado.httpserver
 from tornado.options import define, options
-from app import Application
+from core.app import Application
 
 
 if __name__ == '__main__':
