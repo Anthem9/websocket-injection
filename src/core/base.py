@@ -86,7 +86,6 @@ class BaseHandler(tornado.web.RequestHandler, WebSocketAppMixin):
             if self.client.is_params:
                 self.client.ws.close()
                 self.client.ws = None
-                print self.client.ws
 
         else:
             self.client.message.append(data)

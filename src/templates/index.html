@@ -17,30 +17,29 @@
 <body>
 <div class="container">
     <h1 class="title">Websocket Injection Proxy</h1>
-    <pre><code id="response">Websocket Injection Proxy</code></pre>
     <form id="form" action="##" onsubmit="return false;">
         <div class="form-group"><label for="target">Target:</label><input class="form-control" type="text" value="" id="target"></div>
+        <div class="checkbox"><label><input type="checkbox" id="is_params" checked="checked">SQLi in GET paramters</label></div>
         <div class="form-group"><label for="sqli-data">SQL Injection data:</label><textarea class="form-control" rows="6" name="sqli-data" id="sqli-data"></textarea></div>
         <div class="form-group"><button id="submit" class="btn btn-primary">Submit</button></div>
     </form>
+    <pre><code id="response">Websocket Injection Proxy</code></pre>
 </div>
 <script>
     $('#submit').click(
         function() {
             $.ajax({
-                type: 'GET',
-                url: '/sqlmap',
-                data: {
-                    'url': $('#target').val(),
-                    'data': $('#sqli-data').val(),
-                    'format': 'json'
+                type: 'POST',
+                url: '/sqlmap?url=' + escape($('#target').val()) + '&data=' + escape($('#sqli-data').val()) + '&is_params=' + escape($("#is_params")[0].checked == true ? '1' : '0'),
+                success: function (_data) {
+                    var response = $('#response')[0];
+                    var data = 'Request: ' + $('#sqli-data').val() + '\nResponse: ' + _data + '\n\n';
+                    response.insertBefore(document.createTextNode(data), response.firstChild);
+
                 },
-                dataType: 'json',
-                success: function (data) {
-                    var response = $('#response');
-                    response.append(document.createTextNode('\n--------------------------------\n'));
-                    response.append(document.createTextNode('Request: ' + $('#sqli-data').val() + '\n'));
-                    response.append(document.createTextNode('Response: ' + data.data));
+                error: function (error) {
+                    var response = $('#response')[0];
+                    response.insertBefore(document.createTextNode(error.responseText + '\n\n'), response.firstChild);
                 }
             });
         }

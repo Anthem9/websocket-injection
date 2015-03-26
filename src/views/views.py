@@ -1,5 +1,6 @@
 import logging
-from requests.models import RequestEncodingMixin
+import urlparse
+from requests.models import RequestEncodingMixin as encoder
 from tornado.escape import parse_qs_bytes
 from tornado.web import asynchronous
 from core.base import BaseHandler
@@ -12,16 +13,25 @@ class SQLMapHandler(BaseHandler):
 
     @asynchronous
     def post(self):
-        url = self.get_argument('url', default=None)
+        _url = self.get_argument('url', default=None)
         data = self.get_argument('data', default=None)
-        self.client.is_params = self.get_argument('is_params', default=False)
-        # `query_str` is the query string of websocket
-        query_str = RequestEncodingMixin._encode_params(parse_qs_bytes(self.request.body))
-        if not url or (not data and not query_str):
+        self.client.is_params = False if self.get_argument('is_params', default=False) == '0' else True
+        if not _url:
             raise UnexpectedReuqestDataException
 
-        if not url.startswith('ws://') and not url.startswith('wss://'):
+        if not _url.startswith('ws://') and not _url.startswith('wss://'):
             raise InvalidWebSocketURLException
+
+        url = urlparse.urlparse(_url)
+        # `query_str` is the query string of websocket
+        query_str = url.query
+        url = '%s://%s%s' % (url.scheme, url.netloc, url.path)
+        if self.request.body:
+            query_str = query_str + '&' + self.request.body
+        query_str = encoder._encode_params(parse_qs_bytes(query_str))
+
+        if not data and not query_str:
+            raise UnexpectedReuqestDataException
 
         if query_str:
             logging.info('Request query string: %s' % query_str)

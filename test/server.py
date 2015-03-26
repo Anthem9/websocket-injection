@@ -36,7 +36,6 @@ class WebSocketHandler(BaseSocketHandler):
         self.session.times = 0
         data = self.get_argument('data', default=None)
         logging.warning('Request(connect): %s' % self.session.id)
-
         try:
             self.db.execute("select table_name from information_schema.tables where table_schema='%s'" % data)
             data = self.db.fetchall()[0]
