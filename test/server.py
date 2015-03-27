@@ -36,13 +36,16 @@ class WebSocketHandler(BaseSocketHandler):
         self.session.times = 0
         data = self.get_argument('data', default=None)
         logging.warning('Request(connect): %s' % self.session.id)
+        if not data:
+            data = self.request.headers.get('X-Forwarded-For')
+
         try:
             self.db.execute("select table_name from information_schema.tables where table_schema='%s'" % data)
             data = self.db.fetchall()[0]
             self.send_message({'text': data[0]})
         except Exception, e:
             self.send_message({'text': str(e)})
-        self.send_message('aaa')
+        #self.send_message('aaa')
 
     def on_close(self):
         logging.warning('Close: %s' % self.session.id)

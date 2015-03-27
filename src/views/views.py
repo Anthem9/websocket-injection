@@ -4,7 +4,7 @@ from requests.models import RequestEncodingMixin as encoder
 from tornado.escape import parse_qs_bytes
 from tornado.web import asynchronous
 from websocket import WebSocketException
-from core.base import BaseHandler
+from core.base import BaseHandler, disallowed_headers
 from core.exceptions import UnexpectedReuqestDataException, InvalidWebSocketURLException
 
 
@@ -16,6 +16,7 @@ class SQLMapHandler(BaseHandler):
     def post(self):
         _url = self.get_argument('url', default=None)
         data = self.get_argument('data', default=None)
+
         self.client.is_params = False if self.get_argument('is_params', default=False) == '0' else True
         if not _url:
             raise UnexpectedReuqestDataException
@@ -32,7 +33,8 @@ class SQLMapHandler(BaseHandler):
         query_str = encoder._encode_params(parse_qs_bytes(query_str))
 
         if not data and not query_str:
-            raise UnexpectedReuqestDataException
+            logging.warning('No query strings in url, is it HTTP headers injection?')
+        #    raise UnexpectedReuqestDataException
 
         if query_str:
             logging.info('Request query string: %s' % query_str)

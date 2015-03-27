@@ -8,6 +8,10 @@ import tornado.gen
 from tornado.template import Loader
 
 
+disallowed_headers = ['Host', 'Origin', 'Content-Length', 'Connection', 'X-Requested-With',
+                      'Accept-Encoding', 'Accept-Language', 'Accept-Charset', 'Content-Type']
+
+
 class Client(dict):
 
     def __init__(self, uuid):
@@ -47,8 +51,10 @@ class WebSocketAppMixin(object):
         self.client.ws = None
 
     def run_websocket(self, url):
+        websocket.enableTrace(True)
         if not self.client.ws:
-            self.client.ws = websocket.WebSocketApp(url=url, on_message=self.on_message)
+            self.client.ws = websocket.WebSocketApp(url=url, on_message=self.on_message,
+                                                    header=self.client.headers)
             thread.start_new(self.client.ws.run_forever, ())
 
     def add_client(self, uuid):
@@ -71,6 +77,14 @@ class BaseHandler(tornado.web.RequestHandler, WebSocketAppMixin):
             self.set_secure_cookie('uuid', session_id)
         self.client = self.get_client(session_id)
         self.client.has_send = False
+
+        # remove disallowed headers
+        headers = self.request.headers
+        for header in disallowed_headers:
+            if header in headers:
+                del headers[header]
+        self.client.headers = ['%s: %s' % header for header in headers.items()]
+
 
     def response(self, data):
         format = self.get_argument('format', default=None)
