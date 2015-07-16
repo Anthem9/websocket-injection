@@ -7,4 +7,3 @@ class Application(tornado.web.Application):
         handlers = handlers_
         settings = dict(debug=True, cookie_secret='&D(1Ihjc23hC)vjdskjf23090c=_09i34ngk')
         tornado.web.Application.__init__(self, handlers=handlers, **settings)
-

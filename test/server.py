@@ -1,6 +1,5 @@
 import logging
 import MySQLdb
-import json
 import tornado.web
 import tornado.ioloop
 import tornado.httpserver
@@ -16,50 +15,19 @@ class Storage(dict):
         self[key] = value
 
 
-class BaseSocketHandler(tornado.websocket.WebSocketHandler):
-
-    def __init__(self, application, request, **kwargs):
-        self.session = Storage()
-        db = MySQLdb.connect(host="localhost", user="root", passwd="", db="test", charset="utf8")
-        self.db = db.cursor()
-
-        tornado.websocket.WebSocketHandler.__init__(self,application, request, **kwargs)
-
-
-class WebSocketHandler(BaseSocketHandler):
+class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         return True
 
     def open(self):
-        self.session.id = str(id(self))
-        self.session.times = 0
-        data = self.get_argument('data', default=None)
-        logging.warning('Request(connect): %s' % self.session.id)
-        if not data:
-            data = self.request.headers.get('X-Forwarded-For')
-
-        try:
-            self.db.execute("select table_name from information_schema.tables where table_schema='%s'" % data)
-            data = self.db.fetchall()[0]
-            self.send_message({'text': data[0]})
-        except Exception, e:
-            self.send_message({'text': str(e)})
-        #self.send_message('aaa')
-
-    def on_close(self):
-        logging.warning('Close: %s' % self.session.id)
-        self.close()
+        self.send_message("Hello")
+        self.send_message("Hello2")
 
     def on_message(self, message):
-        logging.info('Recv(%d): %s' % (self.session.times, message))
-        #if self.session.times == 1:
-        try:
-            self.db.execute("select table_name from information_schema.tables where table_schema='%s'" % message)
-            data = self.db.fetchall()[0]
-            self.send_message({'text': data[0]})
-        except Exception, e:
-            self.send_message({'text': str(e)})
+        logging.info('Recv: %s' % message)
+        self.send_message(message)
+        self.send_message(message)
 
     def send_message(self, message):
         logging.info('Send: %s' % message)

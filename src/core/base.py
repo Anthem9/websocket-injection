@@ -1,11 +1,10 @@
-import json
-import uuid
+import time
 import logging
 import thread
 import websocket
 import tornado.web
-import tornado.gen
 from tornado.template import Loader
+from websocket._exceptions import WebSocketConnectionClosedException
 
 
 disallowed_headers = ['Host', 'Origin', 'Content-Length', 'Connection', 'X-Requested-With',
@@ -34,8 +33,8 @@ class Client(dict):
 class WebSocketAppMixin(object):
     url = None
     client = None
-    clients = list()
     _instance = None
+    message_queue = []
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -44,70 +43,48 @@ class WebSocketAppMixin(object):
 
     def on_message(self, websocket, message):
         logging.info('Recv: %s' % message)
-        self.response(message)
+        self.message_queue.append(message)
 
     def on_close(self, websocket):
-        logging.critical('Connection closed')
-        self.client.ws = None
+        logging.warning('Connection closed.')
+        self.response('\n'.join(self.message_queue))
+        self.message_queue = []
 
-    def run_websocket(self, url):
-        websocket.enableTrace(True)
-        if not self.client.ws:
-            self.client.ws = websocket.WebSocketApp(url=url, on_message=self.on_message,
-                                                    header=self.client.headers)
-            thread.start_new(self.client.ws.run_forever, ())
+    def on_error(self, websocket, error):
+        logging.error('Error: %s' % error)
 
-    def add_client(self, uuid):
-        self.clients.append(Client(uuid=uuid))
+    def on_open(self, websocket):
+        def run():
+            try:
+                data = self.get_argument('data')
+                logging.info('Send: %s' % data)
+                websocket.send(data)
+                time.sleep(0.1)
+                websocket.keep_running = False
+                websocket.close()
+            except WebSocketConnectionClosedException:
+                pass
+        thread.start_new_thread(run, ())
 
-    def get_client(self, uuid):
-        client = next((l for l in self.clients if l.uuid == uuid), None)
-        if not client:
-            client = Client(uuid=uuid)
-            self.clients.append(client)
-        return client
+    def connect(self, url):
+        # websocket.enableTrace(True)
+        self.client = websocket.WebSocketApp(url=url,
+                                             on_message=self.on_message,
+                                             on_close=self.on_close,
+                                             on_error=self.on_error)
+        self.client.on_open = self.on_open
+        self.client.run_forever()
+        logging.info('Connected: %s' % url)
 
 
 class BaseHandler(tornado.web.RequestHandler, WebSocketAppMixin):
     def __init__(self, application, request, **kwargs):
         super(BaseHandler, self).__init__(application, request, **kwargs)
-        session_id = self.get_secure_cookie('uuid')
-        if not session_id:
-            session_id = str(uuid.uuid1())
-            self.set_secure_cookie('uuid', session_id)
-        self.client = self.get_client(session_id)
-        self.client.has_send = False
-
-        # remove disallowed headers
-        headers = self.request.headers
-        for header in disallowed_headers:
-            if header in headers:
-                del headers[header]
-        self.client.headers = ['%s: %s' % header for header in headers.items()]
-
 
     def response(self, data):
-        format = self.get_argument('format', default=None)
-
-        if not self.client.has_send:
-            logging.info('Response: %s' % data)
-            self.client.has_send = True
-            self.client.message.append(data)
-            if format == 'json':
-                response = json.dumps(self.client.message)
-            else:
-                response = ''.join(self.client.message)
-            self.write(response)
-            self.client.message = []
-            self.finish()
-
-            if self.client.is_params:
-                self.client.ws.close()
-                self.client.ws = None
-
-        else:
-            self.client.message.append(data)
-            self.client.has_send = False
+        logging.info('Response: %s' % data)
+        self.write(data)
+        self.finish()
 
     def render(self, template, **kwargs):
         loader = Loader('templates')
