@@ -3,12 +3,15 @@ import logging
 import thread
 import websocket
 import tornado.web
+import signal
 from tornado.template import Loader
+from core.exceptions import TimeoutWithoutResponseException
 from websocket._exceptions import WebSocketConnectionClosedException
 
 
-disallowed_headers = ['Host', 'Origin', 'Content-Length', 'Connection', 'X-Requested-With',
-                      'Accept-Encoding', 'Accept-Language', 'Accept-Charset', 'Content-Type']
+def timeout_handler(signum, frame):
+    logging.error('Time exceeded when waiting for response.')
+    raise TimeoutWithoutResponseException
 
 
 class Client(dict):
@@ -52,6 +55,8 @@ class WebSocketAppMixin(object):
 
     def on_error(self, websocket, error):
         logging.error('Error: %s' % error)
+        error_message = '-' * 20 + '\nError: %s\n' % error + '-' * 20
+        self.message_queue.append(error_message)
 
     def on_open(self, websocket):
         def run():
@@ -67,6 +72,9 @@ class WebSocketAppMixin(object):
         thread.start_new_thread(run, ())
 
     def connect(self, url):
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(20)
+        logging.info('Connecting: %s' % url)
         # websocket.enableTrace(True)
         self.client = websocket.WebSocketApp(url=url,
                                              on_message=self.on_message,
@@ -74,7 +82,6 @@ class WebSocketAppMixin(object):
                                              on_error=self.on_error)
         self.client.on_open = self.on_open
         self.client.run_forever()
-        logging.info('Connected: %s' % url)
 
 
 class BaseHandler(tornado.web.RequestHandler, WebSocketAppMixin):
@@ -82,7 +89,7 @@ class BaseHandler(tornado.web.RequestHandler, WebSocketAppMixin):
         super(BaseHandler, self).__init__(application, request, **kwargs)
 
     def response(self, data):
-        logging.info('Response: %s' % data)
+        logging.info('Response: %s...' % data.replace('\n', ' ')[0:40])
         self.write(data)
         self.finish()
 
