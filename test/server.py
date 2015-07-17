@@ -27,7 +27,23 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         logging.info('Recv: %s' % message)
         self.send_message(message)
-        self.send_message(message)
+        self.session = Storage()
+        db = MySQLdb.connect(host="localhost", user="root", passwd="", db="test", charset="utf8")
+        cur = db.cursor()
+        try:
+            sql = "select table_name from information_schema.tables where table_schema='%s'" % message
+            logging.info('Execute: %s' % sql)
+            cur.execute(sql)
+            data = cur.fetchall()[0]
+            self.send_message({'text': data[0]})
+        except Exception, e:
+            self.send_message({'text': str(e)})
+        cur.close()
+        db.close()
+        self.close()
+
+    def on_close(self):
+        logging.warning('Close')
 
     def send_message(self, message):
         logging.info('Send: %s' % message)

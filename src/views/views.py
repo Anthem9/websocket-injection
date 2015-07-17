@@ -1,6 +1,6 @@
 import tornado.gen
 from tornado.escape import parse_qs_bytes
-from core.base import BaseHandler, disallowed_headers
+from core.base import BaseHandler
 from core.exceptions import UnexpectedReuqestDataException, InvalidWebSocketURLException
 
 
