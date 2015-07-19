@@ -14,25 +14,6 @@ def timeout_handler(signum, frame):
     raise TimeoutWithoutResponseException
 
 
-class Client(dict):
-
-    def __init__(self, uuid):
-        super(Client, self).__init__()
-        self.uuid = uuid
-        self.has_send = False
-        self.is_params = False
-        self.message = []
-
-    def __getattr__(self, item):
-        return self.get(item)
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __repr__(self):
-        return '<Client: %s(%s)>' % (self.uuid, str(self.has_send))
-
-
 class WebSocketAppMixin(object):
     url = None
     client = None
