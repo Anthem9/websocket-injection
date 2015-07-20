@@ -3,47 +3,134 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title>Websocket Injection Proxy</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
-    <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.0/material.indigo-pink.min.css">
+    <script src="https://storage.googleapis.com/code.getmdl.io/1.0.0/material.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <style>
-        .container {
-            width: 80%;
-            max-width: 800px;
+        .fixed-header-container {
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14),
+            0 3px 1px -2px rgba(0, 0, 0, 0.2),
+            0 1px 5px 0 rgba(0, 0, 0, 0.12);
+            width: 40%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .fixed-header-container .mdl-layout__content {
+            background: #FAFAFA;
+        }
+
+        .mdl-layout__content {
+            padding: 20px;
+        }
+
+        .data-box {
+            width: 100%;
+        }
+
+        .mdl-card {
+            box-shadow: 0 2px 2px 0 rgba(0,0,0,.14),0 3px 1px -2px rgba(0,0,0,.2),0 1px 5px 0 rgba(0,0,0,.12);
+            margin: 10px 0;
+            width: 75%;
+            word-break: break-word;
+        }
+
+        .right {
+            float: right;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1 class="title">Websocket Injection Proxy</h1>
-    <form id="form" action="##" onsubmit="return false;">
-        <div class="form-group"><label for="target">Target:</label><input class="form-control" type="text" value="" id="target"></div>
-        <div class="checkbox"><label><input type="checkbox" id="is_params" checked="checked">SQLi in GET paramters</label></div>
-        <div class="form-group"><label for="sqli-data">SQL Injection data:</label><textarea class="form-control" rows="6" name="sqli-data" id="sqli-data"></textarea></div>
-        <div class="form-group"><button id="submit" class="btn btn-primary">Submit</button></div>
-    </form>
-    <pre><code id="response">Websocket Injection Proxy</code></pre>
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header fixed-header-container">
+    <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+            <span class="mdl-layout-title">Websocket Injection Proxy</span>
+            <div class="mdl-layout-spacer"></div>
+        </div>
+    </header>
+    <div class="mdl-layout__drawer">
+    </div>
+    <main class="mdl-layout__content">
+        <form id="form" action="##" onsubmit="return false;">
+            <div class="form-group">
+                <div class="mdl-textfield mdl-js-textfield textfield-demo">
+                    <input class="mdl-textfield__input" type="text" id="url" />
+                    <label class="mdl-textfield__label" for="url">URL</label>
+                </div>
+                <button class="mdl-button mdl-js-button mdl-js-ripple-effect" id="connect">Connect</button>
+            </div>
+            <div class="form-group">
+                <div class="mdl-textfield mdl-js-textfield textfield-demo data-box">
+                    <textarea class="mdl-textfield__input" type="text" rows= "3" id="data" ></textarea>
+                    <label class="mdl-textfield__label" for="data">Text lines...</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect" id="send">
+                    Send
+                </button>
+            </div>
+        </form>
+        <div id="response">
+        </div>
+    </main>
 </div>
 <script>
-    $('#submit').click(
-        function() {
-            $.ajax({
-                type: 'POST',
-                url: '/sqlmap?url=' + escape($('#target').val()) + '&data=' + escape($('#sqli-data').val()) + '&is_params=' + escape($("#is_params")[0].checked == true ? '1' : '0'),
-                success: function (_data) {
-                    var response = $('#response')[0];
-                    var data = 'Request: ' + $('#sqli-data').val() + '\nResponse: ' + _data + '\n\n';
-                    response.insertBefore(document.createTextNode(data), response.firstChild);
+    var websocket = null,
+        connect_button = document.getElementById('connect'),
+        send_button = document.getElementById('send'),
+        url_input = document.getElementById('url'),
+        data_input = document.getElementById('data');
 
-                },
-                error: function (error) {
-                    var response = $('#response')[0];
-                    response.insertBefore(document.createTextNode(error.responseText + '\n\n'), response.firstChild);
-                }
-            });
+    function add_card(data, position) {
+        if (position === undefined) {
+            position = 'right';
         }
-    );
+        var response_container = document.getElementById('response');
+        var container = document.createElement('div');
+        container.className = 'mdl-card ' + position;
+        var div = document.createElement('div');
+        div.className = 'mdl-card__supporting-text left';
+        var code = document.createElement('code');
+        code.innerText = data;
+        var pre = document.createElement('pre');
+        pre.appendChild(code);
+        div.appendChild(pre);
+        container.appendChild(div);
+        container.style.cssText = 'min-height: 0;'; // overwrite mdl-card's style
+
+        if (response_container.childNodes.length > 0) {
+            response_container.insertBefore(container, response_container.childNodes[0]);
+        } else {
+            response_container.appendChild(container);
+        }
+    }
+
+    connect_button.onclick = function () {
+        var url = url_input.value;
+        websocket = new WebSocket(url);
+        websocket.onopen = function (event) {
+            add_card('Connected: ' + url, 'right');
+        };
+        websocket.onerror = function (data) {
+            console.log(data);
+            add_card('Error: ' + data.data, 'left');
+        };
+        websocket.onmessage = function (data) {
+            add_card(data.data, 'left');
+        };
+        websocket.onclose = function (event) {
+            add_card('Connection closed', 'left');
+        };
+    };
+
+    send_button.onclick = function () {
+        if (websocket === null) {
+            return;
+        }
+        var data = data_input.value;
+        add_card(data, 'right');
+        websocket.send(data);
+    };
 </script>
 </body>
 </html>
